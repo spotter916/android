@@ -132,7 +132,9 @@ jobs:
         ANDROID_STORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
         ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
         ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
-      run: ./gradlew bundleRelease --no-daemon
+      run: |
+        chmod +x gradlew
+        ./gradlew bundleRelease --no-daemon
       
     - name: Upload Android App Bundle
       uses: actions/upload-artifact@v4

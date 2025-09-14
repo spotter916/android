@@ -55,12 +55,35 @@ jobs:
         echo "Source directory exists?"
         ls -la src/ 2>/dev/null && echo "✓ src/ exists" || echo "✗ src/ missing"
         
+    - name: Create clean vite config
+      run: |
+        echo "Creating clean vite.config.ts with correct alias configuration..."
+        cat > vite.config.ts << 'EOF'
+        import { defineConfig } from 'vite'
+        import react from '@vitejs/plugin-react'
+        import path from 'path'
+
+        export default defineConfig({
+          plugins: [react()],
+          resolve: {
+            alias: {
+              "@": path.resolve(__dirname, "src"),
+              "@shared": path.resolve(__dirname, "shared")
+            }
+          },
+          build: {
+            outDir: 'dist/public',
+            emptyOutDir: true
+          }
+        })
+        EOF
+        echo "✅ Created clean vite.config.ts"
+
     - name: Build web assets  
       run: |
         echo "Building web assets..."
-        echo "✅ Using clean vite.config.ts with correct alias configuration"
         echo "📁 Structure: index.html in root, App.tsx in src/, alias '@' → 'src/'"
-        npx vite build --config android-build-only/vite.config.ts --outDir dist/public --emptyOutDir
+        npx vite build --outDir dist/public --emptyOutDir
       
     - name: Sync Capacitor
       run: |

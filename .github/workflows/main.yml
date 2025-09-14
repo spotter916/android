@@ -40,13 +40,37 @@ jobs:
         echo "NPM version:"
         npm --version
       
+    - name: Debug and find index.html
+      run: |
+        echo "🔍 DEBUGGING: Finding all index.html files..."
+        find . -name "index.html" -not -path "./node_modules/*" 2>/dev/null || echo "No index.html found"
+        echo ""
+        echo "📁 Checking directory contents:"
+        echo "Root level:"
+        ls -la | head -10
+        echo ""
+        echo "Client directory exists?"
+        ls -la client/ 2>/dev/null && echo "✓ client/ exists" || echo "✗ client/ missing"
+        echo ""
+        echo "Source directory exists?"
+        ls -la src/ 2>/dev/null && echo "✓ src/ exists" || echo "✗ src/ missing"
+        
     - name: Build web assets  
       run: |
         echo "Building web assets..."
-        echo "Looking for client/index.html..."
-        ls -la client/index.html
-        echo "Building with Vite from client directory..."
-        npx vite build client --outDir dist/public --emptyOutDir
+        if [ -f "index.html" ]; then
+          echo "✅ Found index.html in root"
+          echo "Building from root directory..."
+          npx vite build . --outDir dist/public --emptyOutDir
+        elif [ -f "client/index.html" ]; then
+          echo "✅ Found client/index.html"
+          echo "Building from client directory..."
+          npx vite build client --outDir dist/public --emptyOutDir
+        else
+          echo "❌ No index.html found in root or client/"
+          echo "Attempting to build from root anyway..."
+          npx vite build . --outDir dist/public --emptyOutDir
+        fi
       
     - name: Sync Capacitor
       run: |

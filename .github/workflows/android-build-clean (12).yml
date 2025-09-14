@@ -134,6 +134,8 @@ jobs:
         ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
       run: |
         chmod +x gradlew
+        echo "android.useAndroidX=true" >> gradle.properties
+        echo "android.enableJetifier=true" >> gradle.properties
         ./gradlew bundleRelease --no-daemon
       
     - name: Upload Android App Bundle

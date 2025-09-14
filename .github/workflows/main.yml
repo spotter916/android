@@ -142,12 +142,18 @@ jobs:
         echo "kotlin.jvm.target.validation.mode=WARNING" >> gradle.properties
         echo "org.gradle.jvmargs=-Xmx4096m -XX:MaxMetaspaceSize=1024m" >> gradle.properties
         echo ""
-        echo "🔐 Signing Configuration Debug:"
-        echo "ANDROID_STORE_FILE: $ANDROID_STORE_FILE"
-        echo "ANDROID_KEY_ALIAS: $ANDROID_KEY_ALIAS"
-        echo "Keystore file exists: $(test -f $ANDROID_STORE_FILE && echo 'YES' || echo 'NO')"
+        echo "🔐 Verifying keystore and signing configuration..."
+        keytool -list -v -keystore $ANDROID_STORE_FILE -storepass $ANDROID_STORE_PASSWORD -alias $ANDROID_KEY_ALIAS -keypass $ANDROID_KEY_PASSWORD
+        echo "✅ Keystore verification completed"
         echo ""
-        ./gradlew bundleRelease --no-daemon -Dkotlin.jvm.target=17 --stacktrace
+        echo "🚀 Building signed Android App Bundle with injection properties..."
+        ./gradlew bundleRelease \
+          -Pandroid.injected.signing.store.file="$ANDROID_STORE_FILE" \
+          -Pandroid.injected.signing.store.password="$ANDROID_STORE_PASSWORD" \
+          -Pandroid.injected.signing.key.alias="$ANDROID_KEY_ALIAS" \
+          -Pandroid.injected.signing.key.password="$ANDROID_KEY_PASSWORD" \
+          -Pandroid.injected.signing.store.type=PKCS12 \
+          --no-daemon -Dkotlin.jvm.target=17 --stacktrace
       
     - name: Upload Android App Bundle
       uses: actions/upload-artifact@v4

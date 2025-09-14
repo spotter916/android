@@ -1,10 +1,14 @@
-import * as React from "react"
-import { Toast, ToastClose, ToastDescription, ToastProvider, ToastTitle, ToastViewport } from "@/components/ui/toast"
 import { useToast } from "@/hooks/use-toast"
+import {
+  Toast,
+  ToastClose,
+  ToastDescription,
+  ToastProvider,
+  ToastTitle,
+  ToastViewport,
+} from "@/components/ui/toast"
 
-export { Toaster }
-
-function Toaster() {
+export function Toaster() {
   const { toasts } = useToast()
 
   return (

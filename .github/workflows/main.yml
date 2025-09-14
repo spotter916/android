@@ -58,19 +58,9 @@ jobs:
     - name: Build web assets  
       run: |
         echo "Building web assets..."
-        if [ -f "index.html" ]; then
-          echo "✅ Found index.html in root"
-          echo "Building from root directory..."
-          npx vite build . --outDir dist/public --emptyOutDir
-        elif [ -f "client/index.html" ]; then
-          echo "✅ Found client/index.html"
-          echo "Building from client directory..."
-          npx vite build client --outDir dist/public --emptyOutDir
-        else
-          echo "❌ No index.html found in root or client/"
-          echo "Attempting to build from root anyway..."
-          npx vite build . --outDir dist/public --emptyOutDir
-        fi
+        echo "✅ Using clean vite.config.ts with correct alias configuration"
+        echo "📁 Structure: index.html in root, App.tsx in src/, alias '@' → 'src/'"
+        npx vite build --config android-build-only/vite.config.ts --outDir dist/public --emptyOutDir
       
     - name: Sync Capacitor
       run: |

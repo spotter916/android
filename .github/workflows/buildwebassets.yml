@@ -1,0 +1,1 @@
+run: npx vite build --outDir dist/public --emptyOutDir

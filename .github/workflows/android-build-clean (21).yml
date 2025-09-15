@@ -120,7 +120,7 @@ jobs:
       uses: actions/setup-java@v4
       with:
         distribution: 'temurin'
-        java-version: '17'
+        java-version: '21'
         
     - name: Setup Android SDK
       uses: android-actions/setup-android@v3
@@ -157,7 +157,7 @@ jobs:
           -Pandroid.injected.signing.store.password="$ANDROID_STORE_PASSWORD" \
           -Pandroid.injected.signing.key.alias="$ANDROID_KEY_ALIAS" \
           -Pandroid.injected.signing.key.password="$ANDROID_KEY_PASSWORD" \
-          --no-daemon -Dkotlin.jvm.target=17 --stacktrace
+          --no-daemon --stacktrace
       
     - name: Upload Android App Bundle
       uses: actions/upload-artifact@v4

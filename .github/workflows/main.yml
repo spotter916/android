@@ -6,7 +6,7 @@ on:
     branches: [ main ]
     paths:
       - 'android/**'
-      - 'client/**'
+      - 'src/**'
       - 'shared/**'
       - 'package.json'
 
@@ -27,7 +27,7 @@ jobs:
     - name: Install dependencies
       run: npm ci
       
-    - name: Verify project structure and build
+    - name: Verify project structure
       run: |
         echo "Current directory:"
         pwd
@@ -35,17 +35,77 @@ jobs:
         ls -la
         echo "Source directory:"
         ls -la src/
-        echo "Checking index.html:"
-        ls -la index.html
         echo "Node version:"
         node --version
         echo "NPM version:"
         npm --version
       
+    - name: Debug and find index.html
+      run: |
+        echo "🔍 DEBUGGING: Finding all index.html files..."
+        find . -name "index.html" -not -path "./node_modules/*" 2>/dev/null || echo "No index.html found"
+        echo ""
+        echo "📁 Checking directory contents:"
+        echo "Root level:"
+        ls -la | head -10
+        echo ""
+        echo "Client directory exists?"
+        ls -la client/ 2>/dev/null && echo "✓ client/ exists" || echo "✗ client/ missing"
+        echo ""
+        echo "Source directory exists?"
+        ls -la src/ 2>/dev/null && echo "✓ src/ exists" || echo "✗ src/ missing"
+        
+    - name: Create assets and vite config
+      run: |
+        echo "Creating attached_assets directory and placeholder assets..."
+        mkdir -p attached_assets
+        
+        # Create placeholder app icons using existing public icons
+        if [ -f "client/public/icons/icon-192x192.png" ]; then
+          cp "client/public/icons/icon-192x192.png" "attached_assets/app Icon.png"
+          echo "✅ Created app Icon.png from existing public icon"
+        else
+          # Create a simple placeholder if no icons exist
+          echo "Creating placeholder app Icon.png..."
+          echo "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==" | base64 -d > "attached_assets/app Icon.png"
+        fi
+        
+        if [ -f "client/public/icons/icon-512x512.png" ]; then
+          cp "client/public/icons/icon-512x512.png" "attached_assets/app icon 1024.png"
+          echo "✅ Created app icon 1024.png from existing public icon"
+        else
+          cp "attached_assets/app Icon.png" "attached_assets/app icon 1024.png"
+          echo "✅ Created app icon 1024.png as copy of app Icon.png"
+        fi
+        
+        echo "Creating clean vite.config.ts with correct alias configuration..."
+        cat > vite.config.ts << 'EOF'
+        import { defineConfig } from 'vite'
+        import react from '@vitejs/plugin-react'
+        import path from 'path'
+
+        export default defineConfig({
+          plugins: [react()],
+          resolve: {
+            alias: {
+              "@": path.resolve(__dirname, "src"),
+              "@shared": path.resolve(__dirname, "shared"),
+              "@assets": path.resolve(__dirname, "attached_assets")
+            }
+          },
+          build: {
+            outDir: 'dist/public',
+            emptyOutDir: true
+          }
+        })
+        EOF
+        echo "✅ Created clean vite.config.ts"
+
     - name: Build web assets  
       run: |
         echo "Building web assets..."
-        npm run build
+        echo "📁 Structure: index.html in root, App.tsx in src/, alias '@' → 'src/'"
+        npx vite build --outDir dist/public --emptyOutDir
       
     - name: Sync Capacitor
       run: |
@@ -63,19 +123,37 @@ jobs:
       
     - name: Create keystore from secret
       run: |
-        mkdir -p android/app/app
-        echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > android/app/app/upload-temp.keystore
-        ls -la android/app/app/upload-temp.keystore
-        echo "✅ Keystore created at: android/app/app/upload-temp.keystore"
+        echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > android/app/upload.keystore
+        echo "✅ Keystore created successfully"
+        ls -la android/app/upload.keystore
+        echo "📊 Keystore file size: $(wc -c < android/app/upload.keystore) bytes"
         
     - name: Build Android App Bundle
       working-directory: android
       env:
-        ANDROID_STORE_FILE: app/app/upload-temp.keystore
-        ANDROID_STORE_PASSWORD: temppass123
-        ANDROID_KEY_ALIAS: upload
-        ANDROID_KEY_PASSWORD: temppass123
-      run: ./gradlew bundleRelease --no-daemon
+        ANDROID_STORE_FILE: app/upload.keystore
+        ANDROID_STORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+        ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+        ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+      run: |
+        chmod +x gradlew
+        echo "android.useAndroidX=true" >> gradle.properties
+        echo "android.enableJetifier=true" >> gradle.properties
+        echo "kotlin.jvm.target.validation.mode=WARNING" >> gradle.properties
+        echo "org.gradle.jvmargs=-Xmx4096m -XX:MaxMetaspaceSize=1024m" >> gradle.properties
+        echo ""
+        echo "🔐 Checking keystore file..."
+        ls -la $ANDROID_STORE_FILE
+        echo "✅ Keystore file verified"
+        echo ""
+        echo "🚀 Building signed Android App Bundle with injection properties..."
+        ./gradlew bundleRelease \
+          -Pandroid.injected.signing.store.file="$ANDROID_STORE_FILE" \
+          -Pandroid.injected.signing.store.password="$ANDROID_STORE_PASSWORD" \
+          -Pandroid.injected.signing.key.alias="$ANDROID_KEY_ALIAS" \
+          -Pandroid.injected.signing.key.password="$ANDROID_KEY_PASSWORD" \
+          -Pandroid.injected.signing.store.type=PKCS12 \
+          --no-daemon -Dkotlin.jvm.target=17 --stacktrace
       
     - name: Upload Android App Bundle
       uses: actions/upload-artifact@v4

@@ -7,7 +7,7 @@ buildscript {
         mavenCentral()
     }
     dependencies {
-        classpath 'com.android.tools.build:gradle:8.7.2'
+        classpath 'com.android.tools.build:gradle:8.6.0'
         classpath 'com.google.gms:google-services:4.4.2'
 
         // NOTE: Do not place your application dependencies here; they belong
@@ -22,30 +22,10 @@ allprojects {
         google()
         mavenCentral()
     }
-    
-    // Force Java 17 for all subprojects to resolve compatibility issues
-    afterEvaluate { project ->
-        if (project.hasProperty("android")) {
-            android {
-                compileOptions {
-                    sourceCompatibility JavaVersion.VERSION_17
-                    targetCompatibility JavaVersion.VERSION_17
-                }
-            }
-        }
-        
-        // Specifically configure kotlin options for the problematic module
-        if (project.name == 'revenuecat-purchases-capacitor') {
-            project.tasks.whenTaskAdded { task ->
-                if (task.name == 'compileReleaseKotlin') {
-                    task.kotlinOptions {
-                        jvmTarget = "17"
-                    }
-                }
-            }
-        }
-    }
 }
+
+// Let each module use its preferred Java version
+// App module can still specify Java 17 if needed
 
 task clean(type: Delete) {
     delete rootProject.buildDir

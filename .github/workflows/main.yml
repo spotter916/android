@@ -151,6 +151,7 @@ jobs:
         echo "✅ Keystore file verified"
         echo ""
         echo "🚀 Building signed Android App Bundle with absolute path injection..."
+        ./gradlew clean
         ./gradlew bundleRelease \
           -Pandroid.injected.signing.store.file="$GITHUB_WORKSPACE/android/app/release.keystore" \
           -Pandroid.injected.signing.store.password="$ANDROID_STORE_PASSWORD" \

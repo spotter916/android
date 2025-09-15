@@ -7,8 +7,8 @@ android {
         applicationId "com.mybranchesllc.app"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 2
-        versionName "2.0"
+        versionCode 3
+        versionName "3.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -18,11 +18,21 @@ android {
     }
     signingConfigs {
         release {
-            if (project.hasProperty('ANDROID_STORE_FILE')) {
-                storeFile file(project.property('ANDROID_STORE_FILE'))
-                storePassword project.property('ANDROID_STORE_PASSWORD')
-                keyAlias project.property('ANDROID_KEY_ALIAS')
-                keyPassword project.property('ANDROID_KEY_PASSWORD')
+            // Use Gradle injection properties (from CI/CD) if available
+            if (project.hasProperty('android.injected.signing.store.file')) {
+                storeFile file(project.property('android.injected.signing.store.file'))
+                storePassword project.property('android.injected.signing.store.password')
+                keyAlias project.property('android.injected.signing.key.alias')
+                keyPassword project.property('android.injected.signing.key.password')
+                storeType project.property('android.injected.signing.store.type')
+            }
+            // Fallback to environment variables for local builds
+            else if (System.getenv('ANDROID_STORE_FILE')) {
+                storeFile file(System.getenv('ANDROID_STORE_FILE'))
+                storePassword System.getenv('ANDROID_STORE_PASSWORD')
+                keyAlias System.getenv('ANDROID_KEY_ALIAS')
+                keyPassword System.getenv('ANDROID_KEY_PASSWORD')
+                storeType 'PKCS12'
             }
         }
     }
@@ -32,6 +42,11 @@ android {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
+    }
+    
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
     }
 }
 

@@ -57,25 +57,29 @@ jobs:
         
     - name: Create assets and vite config
       run: |
-        echo "Creating attached_assets directory and placeholder assets..."
+        echo "Creating attached_assets directory and using actual app icon..."
         mkdir -p attached_assets
         
-        # Create placeholder app icons using existing public icons
-        if [ -f "client/public/icons/icon-192x192.png" ]; then
+        # Use the actual launcher icon from Android app (highest resolution available)
+        if [ -f "android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png" ]; then
+          cp "android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png" "attached_assets/app Icon.png"
+          cp "android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png" "attached_assets/app icon 1024.png"
+          echo "✅ Created app icons from actual launcher icon"
+        elif [ -f "client/public/icons/icon-192x192.png" ]; then
           cp "client/public/icons/icon-192x192.png" "attached_assets/app Icon.png"
           echo "✅ Created app Icon.png from existing public icon"
+          if [ -f "client/public/icons/icon-512x512.png" ]; then
+            cp "client/public/icons/icon-512x512.png" "attached_assets/app icon 1024.png"
+            echo "✅ Created app icon 1024.png from existing public icon"
+          else
+            cp "attached_assets/app Icon.png" "attached_assets/app icon 1024.png"
+            echo "✅ Created app icon 1024.png as copy of app Icon.png"
+          fi
         else
           # Create a simple placeholder if no icons exist
           echo "Creating placeholder app Icon.png..."
           echo "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==" | base64 -d > "attached_assets/app Icon.png"
-        fi
-        
-        if [ -f "client/public/icons/icon-512x512.png" ]; then
-          cp "client/public/icons/icon-512x512.png" "attached_assets/app icon 1024.png"
-          echo "✅ Created app icon 1024.png from existing public icon"
-        else
           cp "attached_assets/app Icon.png" "attached_assets/app icon 1024.png"
-          echo "✅ Created app icon 1024.png as copy of app Icon.png"
         fi
         
         echo "Creating clean vite.config.ts with correct alias configuration..."
@@ -123,18 +127,18 @@ jobs:
       
     - name: Create keystore from secret
       run: |
-        echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > android/app/upload.keystore
+        echo "🔧 Creating keystore from base64 secret using absolute path..."
+        echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > "$GITHUB_WORKSPACE/android/app/release.keystore"
         echo "✅ Keystore created successfully"
-        ls -la android/app/upload.keystore
-        echo "📊 Keystore file size: $(wc -c < android/app/upload.keystore) bytes"
+        ls -la "$GITHUB_WORKSPACE/android/app/release.keystore"
+        echo "📊 Keystore file size: $(wc -c < "$GITHUB_WORKSPACE/android/app/release.keystore") bytes"
         
     - name: Build Android App Bundle
       working-directory: android
       env:
-        ANDROID_STORE_FILE: app/upload.keystore
-        ANDROID_STORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-        ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
-        ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        ANDROID_STORE_PASSWORD: temppass123
+        ANDROID_KEY_ALIAS: upload
+        ANDROID_KEY_PASSWORD: temppass123
       run: |
         chmod +x gradlew
         echo "android.useAndroidX=true" >> gradle.properties
@@ -143,16 +147,15 @@ jobs:
         echo "org.gradle.jvmargs=-Xmx4096m -XX:MaxMetaspaceSize=1024m" >> gradle.properties
         echo ""
         echo "🔐 Checking keystore file..."
-        ls -la $ANDROID_STORE_FILE
+        ls -la "$GITHUB_WORKSPACE/android/app/release.keystore"
         echo "✅ Keystore file verified"
         echo ""
-        echo "🚀 Building signed Android App Bundle with injection properties..."
+        echo "🚀 Building signed Android App Bundle with absolute path injection..."
         ./gradlew bundleRelease \
-          -Pandroid.injected.signing.store.file="$ANDROID_STORE_FILE" \
+          -Pandroid.injected.signing.store.file="$GITHUB_WORKSPACE/android/app/release.keystore" \
           -Pandroid.injected.signing.store.password="$ANDROID_STORE_PASSWORD" \
           -Pandroid.injected.signing.key.alias="$ANDROID_KEY_ALIAS" \
           -Pandroid.injected.signing.key.password="$ANDROID_KEY_PASSWORD" \
-          -Pandroid.injected.signing.store.type=PKCS12 \
           --no-daemon -Dkotlin.jvm.target=17 --stacktrace
       
     - name: Upload Android App Bundle

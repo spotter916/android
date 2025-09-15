@@ -116,14 +116,14 @@ jobs:
         npx cap sync android
         npx cap copy android
         
-    - name: Setup Java
+    - name: Setup Android SDK
+      uses: android-actions/setup-android@v3
+        
+    - name: Setup Java (after Android SDK)
       uses: actions/setup-java@v4
       with:
         distribution: 'temurin'
         java-version: '21'
-        
-    - name: Setup Android SDK
-      uses: android-actions/setup-android@v3
       
     - name: Create keystore from secret
       run: |
@@ -145,19 +145,28 @@ jobs:
         echo "android.enableJetifier=true" >> gradle.properties
         echo "kotlin.jvm.target.validation.mode=WARNING" >> gradle.properties
         echo "org.gradle.jvmargs=-Xmx4096m -XX:MaxMetaspaceSize=1024m" >> gradle.properties
+        echo "org.gradle.java.installations.auto-download=true" >> gradle.properties
+        echo ""
+        echo "🔍 Verifying Java configuration..."
+        echo "JAVA_HOME=$JAVA_HOME"
+        java -version
+        ./gradlew -version
         echo ""
         echo "🔐 Checking keystore file..."
         ls -la "$GITHUB_WORKSPACE/android/app/release.keystore"
         echo "✅ Keystore file verified"
         echo ""
-        echo "🚀 Building signed Android App Bundle with absolute path injection..."
-        ./gradlew clean
+        echo "🛑 Stopping any existing Gradle daemons..."
+        ./gradlew --stop || true
+        echo ""
+        echo "🚀 Building signed Android App Bundle with explicit Java 21..."
+        ./gradlew clean -Dorg.gradle.java.home="$JAVA_HOME" --no-daemon
         ./gradlew bundleRelease \
           -Pandroid.injected.signing.store.file="$GITHUB_WORKSPACE/android/app/release.keystore" \
           -Pandroid.injected.signing.store.password="$ANDROID_STORE_PASSWORD" \
           -Pandroid.injected.signing.key.alias="$ANDROID_KEY_ALIAS" \
           -Pandroid.injected.signing.key.password="$ANDROID_KEY_PASSWORD" \
-          --no-daemon --stacktrace
+          -Dorg.gradle.java.home="$JAVA_HOME" --no-daemon --stacktrace
       
     - name: Upload Android App Bundle
       uses: actions/upload-artifact@v4

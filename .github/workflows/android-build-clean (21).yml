@@ -33,10 +33,10 @@ jobs:
         pwd
         echo "Project structure:"
         ls -la
-        echo "Client directory:"
-        ls -la client/
-        echo "Checking client/index.html:"
-        ls -la client/index.html
+        echo "Source directory:"
+        ls -la src/
+        echo "Checking index.html:"
+        ls -la index.html
         echo "Node version:"
         node --version
         echo "NPM version:"
@@ -44,8 +44,8 @@ jobs:
       
     - name: Build web assets  
       run: |
-        echo "Building web assets with explicit CLI flags..."
-        npx vite build --root client --outDir ../dist/public --emptyOutDir
+        echo "Building web assets..."
+        npm run build
       
     - name: Sync Capacitor
       run: |
